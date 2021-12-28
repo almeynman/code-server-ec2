@@ -1,6 +1,6 @@
 import * as cdk from "@aws-cdk/core";
 import * as ec2 from "@aws-cdk/aws-ec2";
-import * as fs from "fs";
+// import * as fs from "fs";
 
 export class CodeServerEc2Stack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -48,13 +48,43 @@ export class CodeServerEc2Stack extends cdk.Stack {
       instanceName: "code-server-ec2",
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T2,
-        ec2.InstanceSize.MICRO
+        ec2.InstanceSize.MEDIUM
       ),
       securityGroup: secGrp,
     });
 
-    const userData = fs.readFileSync("scripts/launch-code-server.sh", "utf-8");
-    instance.addUserData(userData);
-    instance.instance.addPropertyOverride("KeyName", "maze-monorepo");
+    // const userData = fs.readFileSync("scripts/launch-code-server.sh", "utf-8");
+    // https://github.com/coder/deploy-code-server/blob/main/deploy-vm/launch-code-server.sh
+    instance.addUserData(`#!/bin/sh
+
+# install code-server service system-wide
+export HOME=/root
+curl -fsSL https://code-server.dev/install.sh | sh
+
+# add our helper server to redirect to the proper URL for --link
+git clone https://github.com/bpmct/coder-cloud-redirect-server
+cd coder-cloud-redirect-server
+cp coder-cloud-redirect.service /etc/systemd/system/
+cp coder-cloud-redirect.py /usr/bin/
+
+# create a code-server user
+adduser --disabled-password --gecos "" coder
+echo "coder ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/coder
+usermod -aG sudo coder
+
+# copy ssh keys from root
+cp -r /root/.ssh /home/coder/.ssh
+chown -R coder:coder /home/coder/.ssh
+
+# configure code-server to use --link with the "coder" user
+mkdir -p /home/coder/.config/code-server
+touch /home/coder/.config/code-server/config.yaml
+echo "link: true" > /home/coder/.config/code-server/config.yaml
+chown -R coder:coder /home/coder/.config
+
+# start and enable code-server and our helper service
+systemctl enable --now code-server@coder
+systemctl enable --now coder-cloud-redirect`);
+    instance.instance.addPropertyOverride("KeyName", "almas-macbook-pro-2020");
   }
 }

@@ -1,3 +1,6 @@
+
+
+
 # Code-Server (VS Code) in an EC2 Instance, Ubuntu AMI and custom userData
 
 > The Code-Server is a Cloud IDE based on VS Code.
