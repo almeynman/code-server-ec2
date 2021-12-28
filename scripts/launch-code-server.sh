@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Copied from https://github.com/coder/deploy-code-server/blob/main/deploy-vm/launch-code-server.sh
+
 # install code-server service system-wide
 export HOME=/root
 curl -fsSL https://code-server.dev/install.sh | sh
